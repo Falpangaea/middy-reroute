@@ -102,7 +102,6 @@ const rerouteMiddleware = async (opts = {}, handler, next) => {
 
   try {
     // Check if file exists
-    // casper
     const keyExists = await doesKeyExist(request.uri, logger);
 
     // Detect if needing friendly URLs
