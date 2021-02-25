@@ -102,7 +102,7 @@ const rerouteMiddleware = async (opts = {}, handler, next) => {
 
   try {
     // Check if file exists
-    const keyExists = await doesKeyExist(request.uri, logger);
+    const keyExists = await doesKeyExist(request.uri);
 
     // Detect if needing friendly URLs
     const isUnFriendlyUrl =
