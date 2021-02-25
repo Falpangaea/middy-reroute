@@ -377,14 +377,14 @@ const doesKeyExist = rawKey => {
     rulesURL = rulesURL.slice(-1) == "/" ? rulesURL + Key : rulesURL + rawKey;
     return cache.get(cacheKey, () =>
       axios.get(rulesURL).then((data) => {
-        console.log('doesKeyExist FOUND: ', Key);
+        console.log('doesURLKeyExist FOUND: ', Key);
         return true;
       }).catch((err) => {
         if (err.errorType === 'NoSuchKey' || err.code === 'NotFound') {
-          log('doesKeyExist NOT Found: ', Key);
+          log('doesURLKeyExist NOT Found: ', Key);
           return false;
         }
-        log('doesKeyExist err: ', err);
+        log('doesURLKeyExist err: ', err);
         return false;
       }),
     );
