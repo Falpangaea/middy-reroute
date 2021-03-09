@@ -30,7 +30,7 @@
 
 ## Why?
 
-Serverless hosting of static websites presents a [few challenges](https://read.acloud.guru/6-things-i-wish-i-had-known-before-going-serverless-502236cf5540#84cf) when it comes to typical server http responses. What we really want as developers it to have the power of `.htaccess` or similar functions. This allowed you to create complex redirect and rewrite rules and simply by placing this file alongside your application files you'd be off to the races. 
+Serverless hosting of static websites presents a [few challenges](https://read.acloud.guru/6-things-i-wish-i-had-known-before-going-serverless-502236cf5540#84cf) when it comes to typical server http responses. What we really want as developers it to have the power of `.htaccess` or similar functions. This allowed you to create complex redirect and rewrite rules and simply by placing this file alongside your application files you'd be off to the races.
 
 So far, no cloud provider offers this ease of configuration without a bit of setup. In the case of AWS, you can use Lambda@Edge to intercept all incoming requests and to handle them as you like. middy-reroute aims to simplify that process by handling all the heavy lifting and offering you a familiar `_redirects` file with which to implement your desired redirects, rewrites, proxies, and custom 404s.
 
@@ -152,7 +152,7 @@ See [Netlify's docs](https://www.netlify.com/docs/redirects/) for more detailed 
 
     // 'multiFile' is a boolean to denote if you would like middy-reroute to
     // look for host specific rules files or just a single rules file matching
-    // the *options.file* param above. MultiFiles will resolve to 
+    // the *options.file* param above. MultiFiles will resolve to
     // `${options.file}_${host}`
     // Eg. multiFile: true (and the host is domain.com)
     //     _redirects_domain.com
@@ -161,6 +161,11 @@ See [Netlify's docs](https://www.netlify.com/docs/redirects/) for more detailed 
     // 'rulesBucket' is the bucket to reference when looking for the rules files
     // Default: As a default the origin bucket is used.
     rulesBucket: 'my-existing-bucket-name',
+
+    // 'rulesURL' is the url to reference when looking for the rules files
+    // Default: not set
+    // Use INSTEAD of 'rulesBucket'
+    // rulesURL: 'https://rules.example.com',
 
     // 'regex'
     regex: {
@@ -174,7 +179,7 @@ See [Netlify's docs](https://www.netlify.com/docs/redirects/) for more detailed 
       ignoreRules: /^(?:\s*(?:#.*)*)$[\r\n]{0,1}|(?:#.*)*/gm,  // default
 
       // 'ruleline' is used to parse each individual line of rules in the rules
-      // file. Change this at your own discretion. At the very lease the same 
+      // file. Change this at your own discretion. At the very lease the same
       // number and order of match groups needs to be defined.
       ruleline: /([^\s\r\n]+)(?:\s+)([^\s\r\n]+)(?:\s+(\d+)([!]?))?(?:(?:\s+)?([^\s\r\n]+))?/,  // default
 
@@ -192,9 +197,9 @@ See [Netlify's docs](https://www.netlify.com/docs/redirects/) for more detailed 
     // redirects.
     redirectStatuses: [301, 302, 303],  // default
 
-    // 'friendlyUrls' specifies whether the URIs should be redirected 
+    // 'friendlyUrls' specifies whether the URIs should be redirected
     // to avoid ending in .html
-    // Eg. 
+    // Eg.
     //   /thing/index.html  =  /thing/
     //   /thing/about.html  =  /thing/about/
     friendlyUrls: true,  // default
@@ -223,6 +228,36 @@ See [Netlify's docs](https://www.netlify.com/docs/redirects/) for more detailed 
     s3Options: { httpOptions: { connectTimeout: 2000 } },
   };
 ```
+
+#### rulesURL Usage:
+'rulesURL' should be used in place of 'rulesBucket'.  When using 'rulesURL', middy-reroute will access the redirect files via an axios HTTP request rather than using an S3 getObject request. This is especially useful if you want to take advantage of the reduced latency of grabbing the redirect file from a - for example - CloudFront cache.
+
+All configuration for middy-reroute should remain the same with the exception that 'rulesBucket' will be replaced with 'rulesURL'.
+
+If you are using CloudFront, S3, and Lambda@Edge, your new CloudFront configuration should contain:
+  1. The same S3 origin config as the CloudFront pointing to your Lambda@Edge function.
+  2. An Origin Access Identity (OAI) should be created and attached to the S3 origin.
+  3. The S3 bucket containing the redirect file(s) should have the following inline bucket policy to support the OAI:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+      {
+          "Sid": "",
+          "Effect": "Allow",
+          "Principal": {
+              "AWS": "${OAI arn}"
+          },
+          "Action": "s3:GetObject",
+          "Resource": "${S3 Bucket arn}/*"
+      }
+  ]
+}
+```
+
+If you are using a different combination of CDN, S3, and function, just make sure:
+  1. The S3 bucket is the origin for your CDN.
+  2. The CDN has access to the S3 objects without having to change the S3 bucket configuration to allow public access.
 
 ## Origin-Request Event Object
 
