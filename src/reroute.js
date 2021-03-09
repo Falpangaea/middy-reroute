@@ -348,87 +348,77 @@ const findMatch = (data, path, host, protocol) => {
 const doesKeyExist = rawKey => {
   var rulesURL = options.rulesURL;
   const Key = rawKey.replace(/^\/+([^\/])/, '$1');
-  logger('doesKeyExist: ', {
+  log('doesKeyExist: ', {
     Key,
     Bucket: options.originBucket
   });
   const cacheKey = `doesKeyExist_${options.rulesBucket}_${Key}`;
+
   if (rulesURL == "") {
-    return cache.get(cacheKey, () =>
-      S3.headObject({
-        Bucket: options.originBucket,
-        Key,
-      })
-        .promise()
-        .then((data) => {
-          logger('doesKeyExist FOUND: ', Key);
-          return true;
-        })
-        .catch((err) => {
-          if (err.errorType === 'NoSuchKey' || err.code === 'NotFound') {
-            logger('doesKeyExist NOT Found: ', Key);
-            return false;
-          }
-          logger('doesKeyExist err: ', err);
-          return false;
-        }),
-    );
-  } else {
-    rulesURL = rulesURL.slice(-1) == "/" ? rulesURL + Key : rulesURL + rawKey;
-    return cache.get(cacheKey, () =>
-      axios.get(rulesURL).then((data) => {
-        console.logger('doesURLKeyExist FOUND: ', Key);
-        return true;
-      }).catch((err) => {
-        if (err.errorType === 'NoSuchKey' || err.code === 'NotFound') {
-          logger('doesURLKeyExist NOT Found: ', Key);
-          return false;
-        }
-        logger('doesURLKeyExist err: ', err);
+    return cache.get(cacheKey, () => S3.headObject({
+      Bucket: options.originBucket,
+      Key
+    }).promise().then(data => {
+      log('doesKeyExist FOUND: ', Key);
+      return true;
+    }).catch(err => {
+      if (err.errorType === 'NoSuchKey' || err.code === 'NotFound') {
+        log('doesKeyExist NOT Found: ', Key);
         return false;
-      }),
-    );
-  };
-}
+      }
+
+      log('doesKeyExist err: ', err);
+      return false;
+    }));
+  } else {
+    rulesURL = "https://" + rulesURL + "/" + Key;
+    return cache.get(cacheKey, () => axios.default.get(rulesURL).then(data => {
+      console.logger('doesURLKeyExist FOUND: ', Key);
+      return true;
+    }).catch(err => {
+      if (err.errorType === 'NoSuchKey' || err.code === 'NotFound') {
+        log('doesURLKeyExist NOT Found: ', Key);
+        return false;
+      }
+
+      log('doesURLKeyExist err: ', err);
+      return false;
+    }));
+  }
+};
 
 const getRedirectData = () => {
   var rulesURL = options.rulesURL;
   const Key = !options.multiFile ? options.file : `${options.file}_${options.host}`;
   const cacheKey = `getRedirectData_${options.rulesBucket}_${Key}`;
+
   if (rulesURL == "") {
     return cache.get(cacheKey, () => {
-      logger(`
+      log(`
         Getting Rules from: ${options.rules ? 'Options' : 'S3'}
         Bucket: ${options.rulesBucket}
         Key: ${Key}`);
-      return !!options.rules
-        ? Promise.resolve(parseRules(options.rules))
-        : S3.getObject({
-            Bucket: options.rulesBucket,
-            Key,
-          })
-            .promise()
-            .then((data) => parseRules(data.Body.toString()))
-            .catch((err) => {
-              logger('No _redirects file', err);
-              return false;
-            });
-          });
+      return !!options.rules ? Promise.resolve(parseRules(options.rules)) : S3.getObject({
+        Bucket: options.rulesBucket,
+        Key
+      }).promise().then(data => parseRules(data.Body.toString())).catch(err => {
+        log('No _redirects file', err);
+        return false;
+      });
+    });
   } else {
-    rulesURL = rulesURL.slice(-1) == "/" ? rulesURL.slice(0, -1) + Key : rulesURL + Key
     return cache.get(cacheKey, () => {
-      logger(`
+      log(`
         Getting Rules from: ${rulesURL}
         Key: ${Key}`);
-      return axios.get(rulesURL).then((response) => {
-            parseRules(response.data.toString())
-          }).catch((err) => {
-            logger('No _redirects file', err);
-            return false;
-        });
+      rulesURL = "https://" + rulesURL + "/" + Key;
+      return !!options.rules ? Promise.resolve(parseRules(options.rules)) : axios.default.get(rulesURL).then(response => parseRules(response.data.toString())).catch(err => {
+        log('No _redirects file', err);
+        return false;
+      });
     });
   }
-}
+};
 
 const getProxyResponse = (resp) => {
   const { status, statusText: statusDescription, data } = resp;
@@ -464,61 +454,61 @@ const get404Response = () => {
   var rulesURL = options.rulesURL;
   const Key = options.custom404;
   const cacheKey = `get404Response_${options.rulesBucket}_${Key}`;
+
   if (rulesURL == "") {
     return cache.get(cacheKey, () => S3.getObject({
-        Bucket: options.originBucket,
-        Key,
-      }).promise().then(({ Body }) => {
-          logger('Custom 404 FOUND');
-          return {
-            status: '404',
-            statusDescription: STATUS_CODES['404'],
-            headers: {
-              'content-type': [
-                {
-                  key: 'Content-Type',
-                  value: 'text/html',
-                },
-              ],
-            },
-            body: Body.toString(),
-          };
-        }).catch((err) => {
-          if (err.errorType === 'NoSuchKey') {
-            logger('Custom 404 NOT Found');
-          }
-          logger('Get404ResponseErr', err);
-          return false;
-        }),
-    );
+      Bucket: options.originBucket,
+      Key
+    }).promise().then(({
+      Body
+    }) => {
+      log('Custom 404 FOUND');
+      return {
+        status: '404',
+        statusDescription: http.STATUS_CODES['404'],
+        headers: {
+          'content-type': [{
+            key: 'Content-Type',
+            value: 'text/html'
+          }]
+        },
+        body: Body.toString()
+      };
+    }).catch(err => {
+      if (err.errorType === 'NoSuchKey') {
+        log('Custom 404 NOT Found');
+      }
+
+      log('Get404ResponseErr', err);
+      return false;
+    }));
   } else {
-    rulesURL = rulesURL.slice(-1) == "/" ? rulesURL.slice(0, -1) + Key : rulesURL + Key
-    return cache.get(cacheKey, () =>
-      axios.get(rulesURL).then(({response}) => {
-        logger('Custom 404 FOUND');
-        return {
-          status: '404',
-          statusDescription: STATUS_CODES['404'],
-          headers: {
-            'content-type': [
-              {
-                key: 'Content-Type',
-                value: 'text/html',
-              },
-            ],
-          },
-          body: response.data.toString(),
-        };
-      }).catch((err) => {
-        if (err.errorType === 'NoSuchKey') {
-          logger('Custom 404 NOT Found');
-        }
-        logger('Get404ResponseErr', err);
-        return false;
-      }),
-    );
+    rulesURL = "https://" + rulesURL + "/" + Key;
+    return cache.get(cacheKey, () => axios.default.get(rulesURL).then(({
+      response
+    }) => {
+      log('Custom 404 FOUND');
+      return {
+        status: '404',
+        statusDescription: http.STATUS_CODES['404'],
+        headers: {
+          'content-type': [{
+            key: 'Content-Type',
+            value: 'text/html'
+          }]
+        },
+        body: response.data.toString()
+      };
+    }).catch(err => {
+      if (err.errorType === 'NoSuchKey') {
+        log('Custom 404 NOT Found');
+      }
+
+      log('Get404ResponseErr', err);
+      return false;
+    }));
   }
-}
+};
 
 ///////////////////////////
 // Event Generators     //
