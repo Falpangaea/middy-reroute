@@ -238,7 +238,7 @@ If you are using CloudFront, S3, and Lambda@Edge, your new CloudFront configurat
   1. The same S3 origin config as the CloudFront pointing to your Lambda@Edge function.
   2. An Origin Access Identity (OAI) should be created and attached to the S3 origin.
   3. The S3 bucket containing the redirect file(s) should have the following inline bucket policy to support the OAI:
-    ```JSON
+    ```json
     {
       "Version": "2012-10-17",
       "Statement": [
@@ -253,7 +253,7 @@ If you are using CloudFront, S3, and Lambda@Edge, your new CloudFront configurat
           }
       ]
     }
-    ```
+   ```
 
   If you are using a different combination of CDN, S3, and function, just make sure:
     
