@@ -256,6 +256,7 @@ If you are using CloudFront, S3, and Lambda@Edge, your new CloudFront configurat
     ```
 
   If you are using a different combination of CDN, S3, and function, just make sure:
+    
     1. The S3 bucket is the origin for your CDN.
     2. The CDN has access to the S3 objects without having to change the S3 bucket configuration to allow public access.
 
